@@ -16,9 +16,10 @@ setup(
     version='0.1.0',
     description='Read greenhouse environmental data',
     long_description=readme,
+    long_description_content_type='text/markdown',
     author='Michael Blum',
     author_email='michaelblum@email.arizona.edu',
     url='https://github.com/michaelandrewblum/be534-final-project',
     license=license,
-    packages=find_packages(exclude=('tests'))
+    packages=find_packages()
 )
