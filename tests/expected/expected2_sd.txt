@@ -1,0 +1,15 @@
+Data input from new_data/data_2021_06_22_2050.csv.
+Data copied to output/data.csv.
+
+Sensor              Average
+---------------------------
+RH_East_Avg           61.74
+RH_West_Avg           64.08
+RH_Center_Avg         64.85
+AirT_East_Avg         25.38
+AirT_West_Avg         24.95
+AirT_Center_Avg        24.5
+PAR_E_Avg              79.8
+PAR_W_Avg             79.23
+TargTempC_E_Avg       25.95
+TargTempC_W_Avg       26.75

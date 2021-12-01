@@ -20,10 +20,11 @@ def get_args():
         description='Environmental Data Dashboard',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('file',
+    parser.add_argument('files',
                         metavar='FILE',
+                        nargs='+',
                         type=argparse.FileType('rt'),
-                        help='CSV input file')
+                        help='CSV input file(s)')
 
     parser.add_argument('-o',
                         '--outfile',
@@ -37,51 +38,87 @@ def get_args():
                         help='A boolean flag',
                         action='store_true')
 
+    parser.add_argument('-n',
+                        '--nottofile',
+                        help='A boolean flag',
+                        action='store_true')
+
+    parser.add_argument('-r',
+                        '--remain',
+                        help='A boolean flag',
+                        action='store_true')
 
     args = parser.parse_args()
-
-    if os.path.splitext(args.file.name)[1] != '.csv':
-        parser.error(f'Input file "{args.file.name}" should be csv file.')
+    for file in args.files:
+        if os.path.splitext(file.name)[1] != '.csv':
+            parser.error('Error -- All input files should be csv files.')
 
     return args
+
 
 # --------------------------------------------------
 def main():
     """Make a jazz noise here"""
 
     args = get_args()
-    
-    infile = args.file.name
     outfile = args.outfile.name
-    
-    in_fh = open(infile, 'r')
-    out_fh = open(outfile, 'a')
 
-    for row in in_fh:
-        out_fh.write(row)
+    # Sort infiles, which will put them in chronological order
+    infiles_sorted = sorted(args.files, key=lambda fh: fh.name)
 
-    print(f'Data copied to {outfile}.', '\n')
+    if not args.nottofile:
+        # Copy contents of input files to output file
+        for infile in infiles_sorted:
+            in_fh = open(infile.name, 'r')
+            out_fh = open(outfile, 'a')
 
-    print('{:<20}{:>7}'.format('Sensor', 'Average'))
+            for row in in_fh:
+                out_fh.write(row)
 
+        # Print to stdout what files input and where output
+        for infile in infiles_sorted:
+            print(f'Data input from {infile.name}.')
+
+        print(f'Data copied to {outfile}.')
+
+    # Get averages for data input in select columns
     if args.dashboard:
 
-        headers = headers = ["RECORD","batt_volt_Min","PanelT","RH_East_Avg","RH_West_Avg","RH_Center_Avg","AirT_East_Avg","AirT_West_Avg","AirT_Center_Avg","PAR_E_Avg","PAR_W_Avg","PAR_E_Total","PAR_W_Total","Incoming_SW_Avg","Outgoing_SW_Avg","Incoming_LW_Avg","Outgoing_LW_Avg","TargmV_E_Avg","SBTempC_E_Avg","TargTempC_E_Avg","TargmV_W_Avg","SBTempC_W_Avg","TargTempC_W_Avg"]
-        avg_list = get_averages(in_fh)
-        avg_dict = {}
+        headers = [
+            "TIMESTAMP", "RECORD", "batt_volt_Min", "PanelT", "RH_East_Avg",
+            "RH_West_Avg", "RH_Center_Avg", "AirT_East_Avg", "AirT_West_Avg",
+            "AirT_Center_Avg", "PAR_E_Avg", "PAR_W_Avg", "PAR_E_Total",
+            "PAR_W_Total", "Incoming_SW_Avg", "Outgoing_SW_Avg",
+            "Incoming_LW_Avg", "Outgoing_LW_Avg", "TargmV_E_Avg",
+            "SBTempC_E_Avg", "TargTempC_E_Avg", "TargmV_W_Avg",
+            "SBTempC_W_Avg", "TargTempC_W_Avg"
+        ]
 
-        for index, header in enumerate(headers):
-            avg_dict[header] = avg_list[index]
+        headers_to_print = [
+            "RH_East_Avg", "RH_West_Avg", "RH_Center_Avg", "AirT_East_Avg",
+            "AirT_West_Avg", "AirT_Center_Avg", "PAR_E_Avg", "PAR_W_Avg",
+            "TargTempC_E_Avg", "TargTempC_W_Avg"
+        ]
 
-        print_headers = ["RH_East_Avg","RH_West_Avg","RH_Center_Avg","AirT_East_Avg","AirT_West_Avg","AirT_Center_Avg","PAR_E_Avg","PAR_W_Avg","TargTempC_E_Avg","TargTempC_W_Avg"]
-        for header in print_headers:
-            print(f'{header:<20}{avg_dict[header]:>7}')
+        for infile in infiles_sorted:
+            print('')
+            print('{:20}{:7}'.format('Sensor', 'Average'))
+            print('-' * 27)
 
-    # Move new input data file into old_data folder.
+            avg_list = get_averages(infile)
+            avg_dict = {}
 
-    Path(infile).rename('old_data/' + os.path.basename(infile))
+            for i, header in enumerate(headers):
+                avg_dict[header] = avg_list[i]
 
-  
+            for header in headers_to_print:
+                print(f'{header:<20}{avg_dict[header]:>7}')
+
+    # Move new input data file into old_data folder if not remain flag.
+    if not args.remain:
+        for infile in infiles_sorted:
+            Path(infile.name).rename('old_data/' +
+                                     os.path.basename(infile.name))
 
 
 # --------------------------------------------------
@@ -98,12 +135,17 @@ def get_averages(fh):
                     n = float(col_value)
                     col_totals[col_id] += n
                 except ValueError:
-                    pass
+                    col_totals[col_id] = 'N/A'
             row_count += 1.0
     row_count -= 1.0
     col_indexes = col_totals.keys()
 
-    averages = [round(col_totals[id]/row_count,2) for id in col_indexes]
+    averages = []
+    for i in col_indexes:
+        try:
+            averages.append(round(col_totals[i] / row_count, 2))
+        except TypeError:
+            averages.append(col_totals[i])
 
     return averages
 

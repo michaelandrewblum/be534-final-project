@@ -1,0 +1,2 @@
+Data input from new_data/data_2021_06_22_2050.csv.
+Data copied to output/data.csv.
